@@ -18,7 +18,7 @@ def get_link(vk_access_token, group_id):
     if 'error' in decoded_response:
         raise requests.exceptions.HTTPError(decoded_response['error'])
 
-    upload_link = response.json()['response']['upload_url']
+    upload_link = decoded_response['response']['upload_url']
     return upload_link
 
 
@@ -81,14 +81,12 @@ def walk_post(vk_access_token, group_owner_id, media_id, photo_owner_id, comment
 
 
 def download_random_comic():
-    url = 'https://xkcd.com/{}'
-    response = requests.get(url.format('info.0.json'))
+    response = requests.get('https://xkcd.com/info.0.json')
     response.raise_for_status()
     response = response.json()
     last_number_comic = response['num']
     random_comic_number = str(random.randint(1, last_number_comic))
-
-    response = requests.get(url.format(random_comic_number + '/info.0.json'))
+    response = requests.get(f'https://xkcd.com/{random_comic_number}/info.0.json')
     response.raise_for_status()
     response = response.json()
     img_link = response['img']
@@ -104,6 +102,7 @@ def main():
     load_dotenv()
     group_id = os.getenv('GROUP_ID')
     vk_access_token = os.getenv('VK_ACCESS_TOKEN')
+    img_link, photo_commentary = download_random_comic()
     try:
         img_link, photo_commentary = download_random_comic()
         upload_link = get_link(vk_access_token, group_id)
