@@ -81,7 +81,7 @@ def walk_post(vk_access_token, group_owner_id, media_id, photo_owner_id, comment
 
 
 def download_random_comic():
-    response = requests.get('https://xkcd.com/info.0.json')
+    response = requests.get(f'https://xkcd.com/info.0.json')
     response.raise_for_status()
     response = response.json()
     last_number_comic = response['num']
