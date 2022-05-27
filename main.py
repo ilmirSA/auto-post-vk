@@ -5,13 +5,12 @@ import requests
 from dotenv import load_dotenv
 
 
-# Получает ссылку для загрузки фото
 def get_link(vk_access_token, group_id):
-    url_method = "https://api.vk.com/method/photos.getWallUploadServer"
+    url_method = 'https://api.vk.com/method/photos.getWallUploadServer'
     params = {
-        'group_id': f'{group_id}',
+        'group_id': group_id,
         'access_token': vk_access_token,
-        'v': "5.131."
+        'v': '5.131.'
     }
     response = requests.get(url_method, params=params)
 
@@ -23,7 +22,6 @@ def get_link(vk_access_token, group_id):
     return upload_link
 
 
-# Загружаем фото по ссылке на сервер
 def upload_photo_to_server(upload_link):
     with open('comics.jpg', 'rb') as file:
         files = {
@@ -32,24 +30,23 @@ def upload_photo_to_server(upload_link):
         }
 
         response = requests.post(upload_link, files=files)
-        decoded_response = response.json()
+    decoded_response = response.json()
 
-        if 'error' in decoded_response:
-            raise requests.exceptions.HTTPError(decoded_response['error'])
+    if 'error' in decoded_response:
+        raise requests.exceptions.HTTPError(decoded_response['error'])
 
-        server = response.json()['server']
-        photo = response.json()["photo"]
-        photo_hash = response.json()['hash']
-        return server, photo, photo_hash
+    server = decoded_response['server']
+    photo = decoded_response['photo']
+    photo_hash = decoded_response['hash']
+    return server, photo, photo_hash
 
 
-# Сохраняем фотографию в альбоме группы
 def save_photo_album(vk_access_token, server, photo, hash_photo):
     url_method = 'https://api.vk.com/method/photos.saveWallPhoto'
     params = {
         'group_id': '213493929',
         'access_token': vk_access_token,
-        'v': "5.131.",
+        'v': '5.131.',
         'server': server,
         'photo': photo,
         'hash': hash_photo,
@@ -60,20 +57,19 @@ def save_photo_album(vk_access_token, server, photo, hash_photo):
     if 'error' in decoded_response:
         raise requests.exceptions.HTTPError(decoded_response['error'])
 
-    media_id = response.json()['response'][0]['id']
-    photo_owner_id = response.json()['response'][0]['owner_id']
+    media_id = decoded_response['response'][0]['id']
+    photo_owner_id = decoded_response['response'][0]['owner_id']
 
     return media_id, photo_owner_id
 
 
-# Публикуем комикс на стене группы
 def walk_post(vk_access_token, group_owner_id, media_id, photo_owner_id, commentary=None):
     url_method = 'https://api.vk.com/method/wall.post'
     params = {
         'access_token': vk_access_token,
-        'v': "5.131.",
+        'v': '5.131.',
         'from_group': 1,
-        'owner_id': f"-{group_owner_id}",
+        'owner_id': f'-{group_owner_id}',
         'attachments': f'photo{photo_owner_id}_{media_id}',
         'message': commentary,
     }
@@ -84,16 +80,21 @@ def walk_post(vk_access_token, group_owner_id, media_id, photo_owner_id, comment
     return response.json()
 
 
-def download_comic():
-    random_comic_number = random.randint(1, 2623)
-    url = f'https://xkcd.com/{random_comic_number}/info.0.json'
-
-    response = requests.get(url)
+def download_random_comic():
+    url = 'https://xkcd.com/{}'
+    response = requests.get(url.format('info.0.json'))
     response.raise_for_status()
-    img_link = response.json()["img"]
-    photo_commentary = response.json()["alt"]
+    response = response.json()
+    last_number_comic = response['num']
+    random_comic_number = str(random.randint(1, last_number_comic))
 
-    with open("comics.jpg", "wb") as file:
+    response = requests.get(url.format(random_comic_number + '/info.0.json'))
+    response.raise_for_status()
+    response = response.json()
+    img_link = response['img']
+    photo_commentary = response['alt']
+
+    with open('comics.jpg', 'wb') as file:
         file.write(requests.get(img_link).content)
 
     return img_link, photo_commentary
@@ -101,29 +102,30 @@ def download_comic():
 
 def main():
     load_dotenv()
-    group_id = os.getenv("GROUP_ID")
-    vk_access_token = os.getenv("VK_ACCESS_TOKEN")
-    img_link, photo_commentary = download_comic()
+    group_id = os.getenv('GROUP_ID')
+    vk_access_token = os.getenv('VK_ACCESS_TOKEN')
+    try:
+        img_link, photo_commentary = download_random_comic()
+        upload_link = get_link(vk_access_token, group_id)
+        server, photo, hash_photo = upload_photo_to_server(upload_link)
 
-    upload_link = get_link(vk_access_token, group_id)
-    server, photo, hash_photo = upload_photo_to_server(upload_link)
+        media_id, photo_owner_id = save_photo_album(
+            vk_access_token,
+            server,
+            photo,
+            hash_photo
+        )
 
-    media_id, photo_owner_id = save_photo_album(
-        vk_access_token,
-        server,
-        photo,
-        hash_photo
-    )
+        walk_post(
+            vk_access_token,
+            group_id,
+            media_id,
+            photo_owner_id,
+            photo_commentary
 
-    walk_post(
-        vk_access_token,
-        group_id,
-        media_id,
-        photo_owner_id,
-        photo_commentary
-
-    )
-    os.remove("comics.jpg")
+        )
+    finally:
+        os.remove('comics.jpg')
 
 
 if __name__ == '__main__':
