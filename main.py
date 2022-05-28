@@ -13,6 +13,7 @@ def get_link(vk_access_token, group_id):
         'v': '5.131.'
     }
     response = requests.get(url_method, params=params)
+    response.raise_for_status()
 
     decoded_response = response.json()
     if 'error' in decoded_response:
@@ -30,6 +31,7 @@ def upload_photo_to_server(upload_link):
         }
 
         response = requests.post(upload_link, files=files)
+    response.raise_for_status()
     decoded_response = response.json()
 
     if 'error' in decoded_response:
@@ -52,6 +54,7 @@ def save_photo_album(vk_access_token, server, photo, hash_photo):
         'hash': hash_photo,
     }
     response = requests.post(url_method, params=params)
+    response.raise_for_status()
     decoded_response = response.json()
 
     if 'error' in decoded_response:
@@ -74,10 +77,11 @@ def walk_post(vk_access_token, group_owner_id, media_id, photo_owner_id, comment
         'message': commentary,
     }
     response = requests.get(url_method, params=params)
+    response.raise_for_status()
     decoded_response = response.json()
     if 'error' in decoded_response:
         raise requests.exceptions.HTTPError(decoded_response['error'])
-    return response.json()
+    return decoded_response
 
 
 def download_random_comic():
