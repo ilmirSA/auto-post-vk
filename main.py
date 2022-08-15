@@ -10,12 +10,14 @@ def get_link(vk_access_token, group_id):
     params = {
         'group_id': group_id,
         'access_token': vk_access_token,
-        'v': '5.131.'
+        'v': '5.131.',
+
     }
     response = requests.get(url_method, params=params)
-    response.raise_for_status()
 
+    response.raise_for_status()
     decoded_response = response.json()
+
     if 'error' in decoded_response:
         raise requests.exceptions.HTTPError(decoded_response['error'])
 
